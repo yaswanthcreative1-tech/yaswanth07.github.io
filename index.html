@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Personal Budget Tracker — Professional Prototype</title>
+<meta name="description" content="Professional prototype: Personal Budget Tracker — interactive demo for presentations" />
+<!-- Chart.js CDN (small modern build) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* Minimal reset and fast system fonts */
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --muted:#6b7280; --accent:#0f62fe; --accent-2:#06b6d4;
+    --radius:12px; --shadow: 0 8px 28px rgba(12,24,48,0.06);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,#fbfdff,var(--bg)); color:#0b1220}
+  .wrap{max-width:1150px;margin:28px auto;padding:18px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:0 6px 18px rgba(15,99,255,0.12)}
+  .brand h1{font-size:18px;margin:0}
+  nav{display:flex;gap:12px;align-items:center}
+  nav a{color:var(--muted);text-decoration:none;font-weight:600;font-size:14px}
+  .btn{border:0;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-ghost{background:transparent;border:1px solid rgba(11,18,32,0.06)}
+  /* Layout */
+  .hero{display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start;margin-bottom:18px}
+  .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .hero-left h2{margin:6px 0 8px 0;font-size:26px}
+  .lead{color:var(--muted);margin:0 0 14px 0}
+  .kpis{display:flex;gap:12px;margin-top:12px}
+  .kpi{flex:1;padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid rgba(11,18,32,0.03)}
+  .kpi .num{font-weight:800;font-size:18px}
+  /* Demo right column */
+  .demo{display:flex;flex-direction:column;gap:12px}
+  .inputs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .inputs input, .inputs select{padding:10px;border-radius:8px;border:1px solid #e6eef7;width:100%;font-size:14px}
+  .controls{display:flex;gap:8px;align-items:center}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  canvas{background:transparent;border-radius:8px}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:18px}
+  .transactions{max-height:320px;overflow:auto;padding-right:6px}
+  .txn{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px dashed rgba(11,18,32,0.04)}
+  .txn .title{font-weight:700}
+  footer{margin-top:20px;text-align:center;color:var(--muted);font-size:13px}
+  .small{font-size:13px;color:var(--muted)}
+  /* Responsive */
+  @media (max-width:980px){
+    .hero{grid-template-columns:1fr}
+    .charts{grid-template-columns:1fr}
+    .grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">PB</div>
+        <div>
+          <h1>Personal Budget Tracker</h1>
+          <div class="small">Professional prototype — client-side demo</div>
+        </div>
+      </div>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#demo">Demo</a>
+        <button class="btn btn-primary" onclick="exportCSV()" title="Export transactions as CSV" aria-label="Export transactions as CSV">Export CSV</button>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="card hero-left">
+        <div class="eyebrow small" style="color:var(--accent)">Prototype • Presentation-ready</div>
+        <h2>Make better money decisions — visual, fast, private.</h2>
+        <p class="lead">Show stakeholders a polished budgeting flow with live charts, downloadable reports, and a clear next-step roadmap. Works fully offline in the browser.</p>
+
+        <div class="kpis" aria-hidden>
+          <div class="kpi">
+            <div class="small">Monthly Income</div>
+            <div id="kpi-income" class="num">₹ 0</div>
+          </div>
+          <div class="kpi">
+            <div class="small">Net</div>
+            <div id="kpi-net" class="num">₹ 0</div>
+          </div>
+          <div class="kpi">
+            <div class="small">Savings Rate</div>
+            <div id="kpi-rate" class="num">0%</div>
+          </div>
+        </div>
+
+        <hr style="margin:14px 0;border:none;border-top:1px solid rgba(11,18,32,0.04)">
+
+        <h3 id="features" style="margin:0 0 8px 0">Features for presentation</h3>
+        <ul style="color:var(--muted);margin:6px 0 0 18px">
+          <li>Interactive spending breakdown + monthly balance history</li>
+          <li>CSV export & chart PNG download for slides</li>
+          <li>Privacy-first: all data stays in your browser</li>
+        </ul>
+      </div>
+
+      <aside class="card demo" id="demo">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Live demo</strong>
+          <div class="small">Press Enter to update</div>
+        </div>
+
+        <div class="inputs" style="margin-top:10px">
+          <input id="income" type="number" placeholder="Income" value="60000" aria-label="Income">
+          <input id="savings" type="number" placeholder="Planned savings" value="10000" aria-label="Planned savings">
+          <input id="rent" type="number" placeholder="Rent" value="18000" aria-label="Rent">
+          <input id="groceries" type="number" placeholder="Groceries" value="6000" aria-label="Groceries">
+          <input id="transport" type="number" placeholder="Transport" value="3000" aria-label="Transport">
+          <input id="entertainment" type="number" placeholder="Entertainment" value="2000" aria-label="Entertainment">
+        </div>
+
+        <div class="controls" style="margin-top:8px">
+          <button class="btn btn-primary" onclick="updateAll()">Update</button>
+          <button class="btn btn-ghost" onclick="loadScenario('student')">Load student</button>
+          <button class="btn btn-ghost" onclick="loadScenario('young-prof')">Load professional</button>
+          <button class="btn btn-ghost" onclick="downloadChart()">Download chart PNG</button>
+        </div>
+
+        <div class="charts" style="margin-top:10px">
+          <div class="card" style="padding:10px">
+            <div class="small" style="margin-bottom:8px">Spending breakdown</div>
+            <canvas id="dough" width="300" height="220" aria-label="Spending breakdown chart"></canvas>
+          </div>
+          <div class="card" style="padding:10px">
+            <div class="small" style="margin-bottom:8px">Monthly balance (demo)</div>
+            <canvas id="line" width="300" height="220" aria-label="Monthly balance chart"></canvas>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <div>
+        <div class="card">
+          <h3 style="margin-top:0">Recent transactions</h3>
+          <div class="transactions" id="tx-list" aria-live="polite" style="margin-top:10px">
+            <!-- transactions injected here -->
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+            <button class="btn btn-ghost" onclick="addRandom()">Add tx</button>
+            <button class="btn btn-ghost" onclick="resetSample()">Reset</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin-top:0">Presentation notes</h3>
+          <ol style="color:var(--muted)">
+            <li>Open demo, show doughnut & line charts.</li>
+            <li>Change Rent → show instant net & KPI update.</li>
+            <li>Download chart PNG and export CSV for slide assets.</li>
+          </ol>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h3 style="margin-top:0">Snapshot</h3>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">
+            <div>
+              <div class="small">Income</div>
+              <div id="snap-income" class="num">₹ 0</div>
+            </div>
+            <div>
+              <div class="small">Savings</div>
+              <div id="snap-savings" class="num">₹ 0</div>
+            </div>
+            <div>
+              <div class="small">Net</div>
+              <div id="snap-net" class="num">₹ 0</div>
+            </div>
+            <div>
+              <div class="small">Savings rate</div>
+              <div id="snap-rate" class="num">0%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin-top:0">Next steps</h3>
+          <ul style="color:var(--muted)">
+            <li>Persist to localStorage / backend</li>
+            <li>Auth & multi-user</li>
+            <li>Recurring transactions, bank import</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+
+    <footer>
+      Prototype generated for presentation — all client-side, fast to load. Built with Chart.js.
+    </footer>
+  </main>
+
+<script>
+/* ---------- Fast professional demo JS ---------- */
+
+/* Sample scenarios */
+const scenarios = {
+  'student': {income:25000, rent:8000, groceries:3500, transport:1200, entertainment:1000, savings:3000},
+  'young-prof': {income:80000, rent:22000, groceries:7000, transport:4000, entertainment:3000, savings:15000}
+};
+
+/* Demo state */
+let txns = [];
+
+/* DOM helpers */
+const $ = id => document.getElementById(id);
+const fmt = n => '₹ ' + Number(n).toLocaleString();
+
+/* Initialize charts */
+const doughCtx = $('dough').getContext('2d');
+const lineCtx = $('line').getContext('2d');
+
+const dough = new Chart(doughCtx, {
+  type: 'doughnut',
+  data: {labels:['Rent','Groceries','Transport','Entertainment','Savings','Other'], datasets:[{data:[0,0,0,0,0,0], hoverOffset:6}]},
+  options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true}},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}},maintainAspectRatio:false}
+});
+
+const line = new Chart(lineCtx, {
+  type: 'line',
+  data: {labels:[],datasets:[{label:'Net balance',data:[],tension:0.3,pointRadius:3,fill:false,borderWidth:2}]},
+  options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}},maintainAspectRatio:false}
+});
+
+/* Update helpers */
+function computeAndRender(data){
+  const totalExpenses = (data.rent + data.groceries + data.transport + data.entertainment);
+  const other = Math.max(0, data.income - (totalExpenses + data.savings));
+  const net = data.income - totalExpenses - data.savings;
+  // KPI / snapshot
+  $('kpi-income').textContent = fmt(data.income);
+  $('kpi-net').textContent = fmt(net);
+  const rate = data.income ? Math.round((data.savings/data.income)*100) : 0;
+  $('kpi-rate').textContent = rate + '%';
+  $('snap-income').textContent = fmt(data.income);
+  $('snap-savings').textContent = fmt(data.savings);
+  $('snap-net').textContent = fmt(net);
+  $('snap-rate').textContent = rate + '%';
+
+  // Doughnut
+  dough.data.datasets[0].data = [data.rent, data.groceries, data.transport, data.entertainment, data.savings, other];
+  dough.update();
+
+  // Line: push a simple simulated 6-month history (for presentation)
+  const months = ['Jun','Jul','Aug','Sep','Oct','Nov'];
+  const base = data.income - (data.rent + data.groceries + data.transport + data.entertainment + data.savings);
+  const history = months.map((m,i)=> Math.round(base + (i-2)*(data.savings/3)));
+  line.data.labels = months;
+  line.data.datasets[0].data = history;
+  line.update();
+
+  // Transactions: simple mapping
+  txns = [
+    {id:1,date:todayOffset(-10),'title':'Salary',amount:data.income,type:'income'},
+    {id:2,date:todayOffset(-9),'title':'Rent',amount:-data.rent,type:'expense'},
+    {id:3,date:todayOffset(-7),'title':'Groceries',amount:-data.groceries,type:'expense'},
+    {id:4,date:todayOffset(-4),'title':'Transport',amount:-data.transport,type:'expense'},
+    {id:5,date:todayOffset(-2),'title':'Savings transfer',amount:-data.savings,type:'expense'}
+  ];
+  renderTxns();
+}
+
+/* Utility: ISO date offset */
+function todayOffset(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+
+/* Render transactions */
+function renderTxns(){
+  const container = $('tx-list'); container.innerHTML='';
+  txns.forEach(t=>{
+    const el = document.createElement('div'); el.className='txn';
+    el.innerHTML = `<div><div class="title">${t.title}</div><div class="small">${t.date} • ${t.type}</div></div>
+      <div style="text-align:right"><div style="font-weight:800">${fmt(Math.abs(t.amount))}</div><div class="small">${t.amount<0?'<span style="color:#ef4444">Expense</span>':'<span style="color:#10b981">Income</span>'}</div></div>`;
+    container.appendChild(el);
+  });
+}
+
+/* Read inputs */
+function readInputs(){
+  return {
+    income: Number($('income').value)||0,
+    savings: Number($('savings').value)||0,
+    rent: Number($('rent').value)||0,
+    groceries: Number($('groceries').value)||0,
+    transport: Number($('transport').value)||0,
+    entertainment: Number($('entertainment').value)||0
+  };
+}
+
+/* Update both charts and UI */
+function updateAll(){ const d = readInputs(); computeAndRender(d); }
+
+/* Preload scenarios */
+function loadScenario(name){
+  const s = scenarios[name];
+  if(!s) return;
+  $('income').value = s.income; $('rent').value = s.rent; $('groceries').value = s.groceries;
+  $('transport').value = s.transport; $('entertainment').value = s.entertainment; $('savings').value = s.savings;
+  updateAll();
+}
+
+/* CSV export */
+function exportCSV(){
+  if(!txns.length) return alert('No transactions to export — update demo first.');
+  // escape and quote each value to be CSV-safe
+  const escapeCSV = v => `"${String(v).replace(/"/g,'""')}"`;
+  const header = ['id','date','title','amount','type'];
+  const rows = txns.map(t => [t.id,t.date,t.title,t.amount,t.type].map(escapeCSV).join(','));
+  const csv = [header.join(','),...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const filename = `transactions-demo-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a);
+  a.click();
+  // cleanup
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },500);
+}
+
+/* Expose for inline handlers */
+window.exportCSV = exportCSV;
+
+/* Download chart PNG */
+function downloadChart(){
+  const url = dough.toBase64Image();
+  const a = document.createElement('a'); a.href = url; a.download = 'spending-breakdown.png'; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* Add a random transaction for demo */
+function addRandom(){
+  const categories = ['Coffee','Subscription','Book','Gift','Repair'];
+  const amt = Math.floor(Math.random()*1200)+150;
+  txns.unshift({id:Date.now(),date:todayOffset(0),title:categories[Math.floor(Math.random()*categories.length)],amount:-amt,type:'expense'});
+  renderTxns();
+}
+
+/* Reset to default sample */
+function resetSample(){ $('income').value=60000; $('rent').value=18000; $('groceries').value=6000; $('transport').value=3000; $('entertainment').value=2000; $('savings').value=10000; updateAll(); }
+
+/* Keyboard: Enter updates charts */
+document.querySelectorAll('input').forEach(i=>i.addEventListener('keyup',e=>{ if(e.key==='Enter') updateAll(); }));
+
+/* Initial load */
+resetSample();
+
+/* Small accessibility helpers: download chart via keyboard Ctrl+D */
+document.addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d'){ e.preventDefault(); downloadChart(); }});
+</script>
+</body>
+</html>
